@@ -78,7 +78,7 @@ rules:
 See also current RBAC yaml files:
 - [kube-ingress-aws-controller](https://github.com/zalando-incubator/kubernetes-on-aws/blob/dev/cluster/manifests/ingress-controller/01-rbac.yaml)
 - [skipper](https://github.com/zalando-incubator/kubernetes-on-aws/blob/dev/cluster/manifests/skipper/rbac.yaml)
-- [external-dns](https://github.com/zalando-incubator/kubernetes-on-aws/blob/dev/cluster/manifests/external-dns/rbac.yaml)
+- [external-dns](https://github.com/zalando-incubator/kubernetes-on-aws/blob/dev/cluster/manifests/external-dns/01-rbac.yaml)
 
 [3]: https://opensource.zalando.com/skipper/kubernetes/routegroups/#routegroups
 [4]: https://opensource.zalando.com/skipper
@@ -138,7 +138,7 @@ default.
 Create the following Ingress to expose the echoserver application to the Internet.
 
 ```yaml
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -172,7 +172,7 @@ this Ingress object will only be fronting one backend Service, we might instead
 create the following:
 
 ```yaml
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -205,7 +205,7 @@ and one AAAA record) for each hostname associated with the Ingress object.
 Example:
 
 ```yaml
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -239,7 +239,7 @@ set to `nlb` then ExternalDNS will create an NLB instead of an ALB.
 Example:
 
 ```yaml
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
