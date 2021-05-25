@@ -100,9 +100,11 @@ func main() {
 	sourceCfg := &source.Config{
 		Namespace:                      cfg.Namespace,
 		AnnotationFilter:               cfg.AnnotationFilter,
+		LabelFilter:                    cfg.LabelFilter,
 		FQDNTemplate:                   cfg.FQDNTemplate,
 		CombineFQDNAndAnnotation:       cfg.CombineFQDNAndAnnotation,
 		IgnoreHostnameAnnotation:       cfg.IgnoreHostnameAnnotation,
+		IgnoreIngressTLSSpec:           cfg.IgnoreIngressTLSSpec,
 		Compatibility:                  cfg.Compatibility,
 		PublishInternal:                cfg.PublishInternal,
 		PublishHostIP:                  cfg.PublishHostIP,
@@ -141,6 +143,7 @@ func main() {
 	endpointsSource := source.NewDedupSource(source.NewMultiSource(sources))
 
 	domainFilter := endpoint.NewDomainFilterWithExclusions(cfg.DomainFilter, cfg.ExcludeDomains)
+	zoneNameFilter := endpoint.NewDomainFilter(cfg.ZoneNameFilter)
 	zoneIDFilter := provider.NewZoneIDFilter(cfg.ZoneIDFilter)
 	zoneTypeFilter := provider.NewZoneTypeFilter(cfg.AWSZoneType)
 	zoneTagFilter := provider.NewZoneTagFilter(cfg.AWSZoneTagFilter)
@@ -148,7 +151,7 @@ func main() {
 	var p provider.Provider
 	switch cfg.Provider {
 	case "akamai":
-		p = akamai.NewAkamaiProvider(
+		p, err = akamai.NewAkamaiProvider(
 			akamai.AkamaiConfig{
 				DomainFilter:          domainFilter,
 				ZoneIDFilter:          zoneIDFilter,
@@ -156,9 +159,10 @@ func main() {
 				ClientToken:           cfg.AkamaiClientToken,
 				ClientSecret:          cfg.AkamaiClientSecret,
 				AccessToken:           cfg.AkamaiAccessToken,
+				EdgercPath:            cfg.AkamaiEdgercPath,
+				EdgercSection:         cfg.AkamaiEdgercSection,
 				DryRun:                cfg.DryRun,
-			},
-		)
+			}, nil)
 	case "alibabacloud":
 		p, err = alibabacloud.NewAlibabaCloudProvider(cfg.AlibabaCloudConfigFile, domainFilter, zoneIDFilter, cfg.AlibabaCloudZoneType, cfg.DryRun)
 	case "aws":
@@ -175,6 +179,7 @@ func main() {
 				APIRetries:           cfg.AWSAPIRetries,
 				PreferCNAME:          cfg.AWSPreferCNAME,
 				DryRun:               cfg.DryRun,
+				ZoneCacheDuration:    cfg.AWSZoneCacheDuration,
 			},
 		)
 	case "aws-sd":
@@ -185,7 +190,7 @@ func main() {
 		}
 		p, err = awssd.NewAWSSDProvider(domainFilter, cfg.AWSZoneType, cfg.AWSAssumeRole, cfg.DryRun)
 	case "azure-dns", "azure":
-		p, err = azure.NewAzureProvider(cfg.AzureConfigFile, domainFilter, zoneIDFilter, cfg.AzureResourceGroup, cfg.AzureUserAssignedIdentityClientID, cfg.DryRun)
+		p, err = azure.NewAzureProvider(cfg.AzureConfigFile, domainFilter, zoneNameFilter, zoneIDFilter, cfg.AzureResourceGroup, cfg.AzureUserAssignedIdentityClientID, cfg.DryRun)
 	case "azure-private-dns":
 		p, err = azure.NewAzurePrivateDNSProvider(domainFilter, zoneIDFilter, cfg.AzureResourceGroup, cfg.AzureSubscriptionID, cfg.DryRun)
 	case "vinyldns":
@@ -281,11 +286,12 @@ func main() {
 	case "ns1":
 		p, err = ns1.NewNS1Provider(
 			ns1.NS1Config{
-				DomainFilter: domainFilter,
-				ZoneIDFilter: zoneIDFilter,
-				NS1Endpoint:  cfg.NS1Endpoint,
-				NS1IgnoreSSL: cfg.NS1IgnoreSSL,
-				DryRun:       cfg.DryRun,
+				DomainFilter:  domainFilter,
+				ZoneIDFilter:  zoneIDFilter,
+				NS1Endpoint:   cfg.NS1Endpoint,
+				NS1IgnoreSSL:  cfg.NS1IgnoreSSL,
+				DryRun:        cfg.DryRun,
+				MinTTLSeconds: cfg.NS1MinTTLSeconds,
 			},
 		)
 	case "transip":
@@ -304,7 +310,7 @@ func main() {
 	case "noop":
 		r, err = registry.NewNoopRegistry(p)
 	case "txt":
-		r, err = registry.NewTXTRegistry(p, cfg.TXTPrefix, cfg.TXTSuffix, cfg.TXTOwnerID, cfg.TXTCacheInterval)
+		r, err = registry.NewTXTRegistry(p, cfg.TXTPrefix, cfg.TXTSuffix, cfg.TXTOwnerID, cfg.TXTCacheInterval, cfg.TXTWildcardReplacement)
 	case "aws-sd":
 		r, err = registry.NewAWSSDRegistry(p.(*awssd.AWSSDProvider), cfg.TXTOwnerID)
 	default:
@@ -321,11 +327,12 @@ func main() {
 	}
 
 	ctrl := controller.Controller{
-		Source:       endpointsSource,
-		Registry:     r,
-		Policy:       policy,
-		Interval:     cfg.Interval,
-		DomainFilter: domainFilter,
+		Source:             endpointsSource,
+		Registry:           r,
+		Policy:             policy,
+		Interval:           cfg.Interval,
+		DomainFilter:       domainFilter,
+		ManagedRecordTypes: cfg.ManagedDNSRecordTypes,
 	}
 
 	if cfg.Once {

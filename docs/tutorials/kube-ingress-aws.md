@@ -76,7 +76,7 @@ rules:
 ```
 
 See also current RBAC yaml files:
-- [kube-ingress-aws-controller](https://github.com/zalando-incubator/kubernetes-on-aws/blob/dev/cluster/manifests/ingress-controller/rbac.yaml)
+- [kube-ingress-aws-controller](https://github.com/zalando-incubator/kubernetes-on-aws/blob/dev/cluster/manifests/ingress-controller/01-rbac.yaml)
 - [skipper](https://github.com/zalando-incubator/kubernetes-on-aws/blob/dev/cluster/manifests/skipper/rbac.yaml)
 - [external-dns](https://github.com/zalando-incubator/kubernetes-on-aws/blob/dev/cluster/manifests/external-dns/rbac.yaml)
 
@@ -269,7 +269,7 @@ status:
 ```
 
 ExternalDNS will create a A-records `echoserver.example.org`, that
-use AWS ALIAS record to automatically maintain IP adresses of the NLB.
+use AWS ALIAS record to automatically maintain IP addresses of the NLB.
 
 ## RouteGroup (optional)
 
